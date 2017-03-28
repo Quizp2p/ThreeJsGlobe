@@ -1,0 +1,143 @@
+<html>
+<head>
+	<meta charset="utf8" />
+	<title>3D Map Demo</title>
+	<link href="bootstrap.min.css" rel="stylesheet" />
+	<style>
+		body {
+			margin: 0px;
+			background-image: url("background.png");
+			background-color: RGBA(1, 15, 36, 1.00);
+			background-size: cover;
+			background-repeat: no-repeat;
+			background-position: center center;
+		}
+		#demo {
+			background-color: none;
+			margin: 0px;
+			overflow-y: hidden;
+			overflow-x: auto;
+		}
+/*		#demo > canvas {
+			z-index: 1;
+		}
+		#demo > div {
+			padding: 0px;
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			z-index: 2;
+		}*/
+	</style>
+</head>
+<body>
+
+<div id="demo">
+
+</div>
+
+<!-- r67 -->
+<script src="three.r84.min.js"></script>
+<script src="TweenLite.min.js"></script>
+<script src="TrackballControls.js"></script>
+<script src="map3d.js"></script>
+
+
+<script>
+function makeEnvMapMaterial(file) {
+	// http://www.clicktorelease.com/blog/creating-spherical-environment-mapping-shader
+	// for improved version of this shader, visit http://makc.github.io/three.js/matcap/
+	var material = new THREE.ShaderMaterial({
+	    uniforms: { 
+	        tMatCap: { 
+	            type: 't', 
+	            value: THREE.ImageUtils.loadTexture( file ) 
+	        },
+	    },
+	    vertexShader: document.getElementById( "sem-vs" ).textContent,
+	    fragmentShader: document.getElementById( "sem-fs" ).textContent,
+	    shading: THREE.SmoothShading
+	});
+
+	material.uniforms.tMatCap.value.wrapS = 
+	material.uniforms.tMatCap.value.wrapT = 
+		THREE.ClampToEdgeWrapping;
+	return material;
+}
+
+function demo(data) {
+
+	var scene = new THREE.Scene();
+
+    light = new THREE.AmbientLight(0xffffff);
+   	// light.position.set(0,0,500);
+   	scene.add(light);
+
+	var camera = new THREE.PerspectiveCamera();
+	camera.position.set(0, 600, 800);
+	camera.lookAt(scene.position);
+	scene.add(camera);
+
+	var renderer, foreground, background, radius;
+	renderer = new THREE.WebGLRenderer({ antialias: true, alpha:true });
+
+	radius = 0.995;
+	renderer.setClearColor(0x000000);
+	renderer.setSize( window.innerWidth, window.innerHeight );
+  	renderer.autoClear = false;
+
+	document.getElementById('demo').appendChild(renderer.domElement);
+
+	var globe = new THREE.Object3D();
+	globe.scale.set(400, 400, 400);
+	scene.add(globe);
+
+	foreground = new THREE.MeshPhongMaterial({ color: 0x039BE5});
+	background = new THREE.MeshPhongMaterial({ color: 0x061F3E, emissive: 0x061F3E});
+
+	var geometry = new THREE.SphereGeometry(radius, 30, 15);
+	globe.add (new THREE.Mesh (geometry, background));
+
+	var outlineMaterial1 = new THREE.MeshBasicMaterial( { color: 0xffffff, side: THREE.BackSide } );
+
+	for (var name in data) {
+		geometry = new Map3DGeometry (data[name], 0);
+		mesh = new THREE.Mesh (geometry, foreground);
+		data[name].mesh = mesh;
+		globe.add(mesh);
+
+		outlineMesh1 = new THREE.Mesh (geometry, outlineMaterial1);
+		outlineMesh1.position = mesh.position;
+		outlineMesh1.scale.multiplyScalar(1.001);
+		globe.add( outlineMesh1 );
+	}
+
+	var resize = function () {
+    	var w = renderer.domElement.parentElement.clientWidth;
+    	var h = renderer.domElement.parentElement.clientHeight;
+        // notify the renderer of the size change
+        renderer.setSize(w, h);
+        // update the camera
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+	};
+
+    //Enable controls
+    var controls = new THREE.TrackballControls(camera);
+
+	var render = function () {
+		controls.update();
+		requestAnimationFrame (render);
+		globe.rotation.y += 0.01;
+		renderer.render (scene, camera);
+	};
+
+	window.addEventListener('resize', resize, false);
+
+	resize();
+	render();
+}
+</script>
+<script src="demo.js"></script>
+</body>
+</html>
